@@ -2,8 +2,7 @@
 
 A synthetic media detector focused not just on clean-lab accuracy, but on
 **measuring how detection performance degrades under realistic, real-world
-conditions** (JPEG recompression, resizing, cropping, screenshotting) — a
-gap that current commercial detectors are known to struggle with.
+conditions** (JPEG recompression, resizing, cropping, screenshotting); a gap that current commercial detectors are known to struggle with.
 
 ## Scope & roadmap
 
