@@ -1,0 +1,20 @@
+# data & artifacts
+data/raw/**/*.jpg
+data/raw/**/*.jpeg
+data/raw/**/*.png
+data/raw/**/*.webp
+data/raw/*.pkl
+data/embeddings/*.npz
+results/*.pt
+results/*.png
+results/*.csv
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# misc
+.ipynb_checkpoints/
+.DS_Store
