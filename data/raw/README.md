@@ -1,9 +1,29 @@
 # Data layout (not committed to git)
 
-## `genimage/` — main train/val/test source
+## Do you need this at all?
 
-Download from https://github.com/GenImage-Dataset/GenImage (request access
-per their instructions). Arrange as:
+Not necessarily. If you're just running the robustness eval against the
+**pretrained UnivFD baseline** (see main README, step 3), you only need
+a small labeled test set — a few hundred real + generated images is
+enough to produce a meaningful robustness-vs-degradation chart. You do
+NOT need the full GenImage download for that.
+
+The full `genimage/` layout below is only needed if you're training your
+**own** probe (`src/train/train_linear_probe.py`), which is an optional
+stretch goal, not a requirement to get results.
+
+## `genimage/` — main train/val/test source (only needed for training your own probe)
+
+Full dataset: https://github.com/GenImage-Dataset/GenImage. See that
+repo's README for download links (Google Drive / Kaggle mirrors tend to
+be more reliable than the original Baidu host from outside Asia).
+
+**Smaller alternative:** search for `tiny-genimage` on Kaggle/HuggingFace
+— a reduced-size subset of GenImage, much more practical to download and
+plenty for training a linear probe (which only needs a few thousand
+examples per generator, not the full million-image set).
+
+Arrange either as:
 
 ```
 data/raw/genimage/

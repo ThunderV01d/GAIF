@@ -34,21 +34,50 @@ from tqdm import tqdm
 from src.augment.degradation import build_degradation_suite
 from src.data.dataset import Sample
 from src.features.clip_embeddings import load_clip
-from src.train.train_linear_probe import LinearProbeHead
+from src.models.heads import LinearProbeHead
+from src.models.pretrained import CLIP_MODEL_NAME as UNIVFD_CLIP_MODEL_NAME
+from src.models.pretrained import load_pretrained_univfd
+
+# The CLIP backbone MUST match what the head was trained on, or you get
+# either a shape-mismatch crash or (worse) silently wrong features if
+# dims ever happened to coincide. 'custom' uses whatever backbone you
+# passed to clip_embeddings.py at training time -- ViT-B-32 here matches
+# that script's own default; change both together if you train with a
+# different backbone.
+CLIP_BACKBONE_BY_HEAD_TYPE = {
+    "univfd": UNIVFD_CLIP_MODEL_NAME,  # ViT-L-14
+    "custom": "ViT-B-32",
+}
+
+
+def load_head(head_type: str, checkpoint_path: Path, device: str = "cpu"):
+    """
+    head_type: 'custom' (our own trained LinearProbeHead, from
+    train_linear_probe.py) or 'univfd' (published pretrained weights,
+    downloaded via scripts/download_univfd_weights.sh).
+    """
+    if head_type == "univfd":
+        return load_pretrained_univfd(checkpoint_path, device=device)
+
+    if head_type == "custom":
+        ckpt = torch.load(checkpoint_path, map_location=device)
+        head = LinearProbeHead(embedding_dim=ckpt["embedding_dim"]).to(device)
+        head.load_state_dict(ckpt["model_state"])
+        head.eval()
+        return head
+
+    raise ValueError(f"Unknown head_type: {head_type!r} (expected 'custom' or 'univfd')")
 
 
 @torch.no_grad()
 def evaluate(
     samples: list[Sample],
     checkpoint_path: Path,
+    head_type: str = "custom",
     device: str = "cpu",
 ) -> pd.DataFrame:
-    clip_model, preprocess = load_clip(device=device)
-
-    ckpt = torch.load(checkpoint_path, map_location=device)
-    head = LinearProbeHead(embedding_dim=ckpt["embedding_dim"]).to(device)
-    head.load_state_dict(ckpt["model_state"])
-    head.eval()
+    clip_model, preprocess = load_clip(model_name=CLIP_BACKBONE_BY_HEAD_TYPE[head_type], device=device)
+    head = load_head(head_type, checkpoint_path, device=device)
 
     degradation_levels = build_degradation_suite()
     rows = []
@@ -122,7 +151,10 @@ def plot_accuracy_vs_degradation(summary: pd.DataFrame, out_path: Path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--samples-pickle", type=Path, required=True)
-    parser.add_argument("--checkpoint", type=Path, required=True)
+    parser.add_argument("--checkpoint", type=Path, required=True,
+                        help="Path to either your trained checkpoint (--head-type custom) "
+                             "or weights/univfd/fc_weights.pth (--head-type univfd)")
+    parser.add_argument("--head-type", choices=["custom", "univfd"], default="custom")
     parser.add_argument("--out", type=Path, required=True, help="CSV of per-sample results summary")
     parser.add_argument("--plot", type=Path, required=True)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -131,7 +163,7 @@ def main():
     with open(args.samples_pickle, "rb") as f:
         samples = pickle.load(f)
 
-    raw_results = evaluate(samples, args.checkpoint, device=args.device)
+    raw_results = evaluate(samples, args.checkpoint, head_type=args.head_type, device=args.device)
     summary = summarize(raw_results)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
