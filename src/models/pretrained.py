@@ -17,8 +17,17 @@ the SIDBench project (https://huggingface.co/dkarageo/sidbench), trained
 on ProGAN data with a frozen CLIP ViT-L/14 backbone (768-dim embeddings
 -- NOT ViT-B/32's 512-dim; using the wrong backbone here will either
 crash on a shape mismatch or, worse, silently run with the wrong
-features if the dims ever happened to coincide). Use CLIP_MODEL_NAME
-below wherever you extract embeddings to feed this head, e.g.:
+features if the dims ever happened to coincide).
+
+IMPORTANT: use "ViT-L-14-quickgelu", not "ViT-L-14". OpenAI's original
+CLIP checkpoints (pretrained="openai") were trained with the QuickGELU
+activation, not standard GELU. open_clip's plain "ViT-L-14" config
+defaults to standard GELU, which silently produces a working-looking
+but functionally broken model when paired with pretrained="openai" --
+it won't crash, it'll just output near-chance, non-degrading predictions
+that can look like "the model is bad" rather than "the model is
+misconfigured." Use CLIP_MODEL_NAME below wherever you extract
+embeddings to feed this head, e.g.:
 
     from src.models.pretrained import CLIP_MODEL_NAME
     load_clip(model_name=CLIP_MODEL_NAME)
@@ -35,7 +44,7 @@ import torch
 
 from src.models.heads import UnivFDHead
 
-CLIP_MODEL_NAME = "ViT-L-14"
+CLIP_MODEL_NAME = "ViT-L-14-quickgelu"
 CLIP_EMBEDDING_DIM = 768
 
 
